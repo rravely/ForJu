@@ -17,30 +17,31 @@
       align-items: center;
       overflow: hidden;
       font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-      background: linear-gradient(135deg, #ffe0ea, #fff7fb);
+      background: linear-gradient(135deg, #dbeafe, #eff6ff, #bfdbfe);
     }
 
     .card {
-      width: min(90vw, 560px);
+      width: min(92vw, 560px);
       padding: 48px 32px;
       text-align: center;
-      background: white;
+      background: rgba(255, 255, 255, 0.95);
       border-radius: 28px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 20px 50px rgba(30, 64, 175, 0.15);
       position: relative;
+      border: 1px solid rgba(147, 197, 253, 0.7);
     }
 
     h1 {
       margin: 0 0 36px;
       font-size: 2rem;
       line-height: 1.5;
-      color: #ff3d7a;
+      color: #1d4ed8;
     }
 
     .button-area {
       position: relative;
       width: 100%;
-      height: 180px;
+      height: 220px;
     }
 
     button {
@@ -51,32 +52,40 @@
       font-weight: 700;
       cursor: pointer;
       white-space: nowrap;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    button:hover {
+      transform: scale(1.04);
+      box-shadow: 0 10px 24px rgba(30, 64, 175, 0.18);
     }
 
     #yesBtn {
-      background: #ff4f8b;
+      background: #2563eb;
       color: white;
       position: absolute;
       left: 50%;
-      top: 110px;
+      top: 130px;
       transform: translateX(-120%);
+      z-index: 2;
     }
 
     #noBtn {
-      background: #f2f2f2;
-      color: #444;
+      background: #e0ecff;
+      color: #1e3a8a;
       position: absolute;
       left: 50%;
-      top: 110px;
+      top: 130px;
       transform: translateX(20%);
+      z-index: 3;
+      user-select: none;
     }
 
-    .result {
-      margin-top: 24px;
-      font-size: 1.3rem;
-      font-weight: 700;
-      color: #ff3d7a;
-      min-height: 32px;
+    .hint {
+      margin-top: 20px;
+      color: #3b82f6;
+      font-size: 0.98rem;
+      font-weight: 600;
     }
   </style>
 </head>
@@ -89,34 +98,46 @@
       <button id="noBtn">동의하지 않음</button>
     </div>
 
-    <div class="result" id="result"></div>
+    <div class="hint">정답은 이미 정해져 있습니다 💙</div>
   </div>
 
   <script>
     const noBtn = document.getElementById("noBtn");
     const yesBtn = document.getElementById("yesBtn");
     const area = document.getElementById("area");
-    const result = document.getElementById("result");
 
-    function moveAwayFromMouse(event) {
+    let initialized = false;
+
+    function placeNoButtonSafely() {
+      const maxX = area.clientWidth - noBtn.offsetWidth;
+      const maxY = area.clientHeight - noBtn.offsetHeight;
+
+      const x = Math.random() * maxX;
+      const y = Math.random() * maxY;
+
+      noBtn.style.left = `${x}px`;
+      noBtn.style.top = `${y}px`;
+      noBtn.style.transform = "none";
+    }
+
+    function moveNoButtonAway(mouseX, mouseY) {
       const areaRect = area.getBoundingClientRect();
-      const btnRect = noBtn.getBoundingClientRect();
 
-      const mouseX = event.clientX - areaRect.left;
-      const mouseY = event.clientY - areaRect.top;
+      const btnCenterX = noBtn.offsetLeft + noBtn.offsetWidth / 2;
+      const btnCenterY = noBtn.offsetTop + noBtn.offsetHeight / 2;
 
-      const btnX = noBtn.offsetLeft + btnRect.width / 2;
-      const btnY = noBtn.offsetTop + btnRect.height / 2;
+      const localMouseX = mouseX - areaRect.left;
+      const localMouseY = mouseY - areaRect.top;
 
-      let dx = btnX - mouseX;
-      let dy = btnY - mouseY;
+      let dx = btnCenterX - localMouseX;
+      let dy = btnCenterY - localMouseY;
 
       const distance = Math.sqrt(dx * dx + dy * dy) || 1;
 
       dx /= distance;
       dy /= distance;
 
-      const moveDistance = 120;
+      const moveDistance = 170;
 
       let newX = noBtn.offsetLeft + dx * moveDistance;
       let newY = noBtn.offsetTop + dy * moveDistance;
@@ -124,37 +145,61 @@
       const maxX = area.clientWidth - noBtn.offsetWidth;
       const maxY = area.clientHeight - noBtn.offsetHeight;
 
-      newX = Math.max(0, Math.min(newX, maxX));
-      newY = Math.max(0, Math.min(newY, maxY));
+      if (newX < 0 || newX > maxX || newY < 0 || newY > maxY) {
+        newX = Math.random() * maxX;
+        newY = Math.random() * maxY;
+      }
 
-      noBtn.style.left = `${newX}px`;
-      noBtn.style.top = `${newY}px`;
+      noBtn.style.left = `${Math.max(0, Math.min(newX, maxX))}px`;
+      noBtn.style.top = `${Math.max(0, Math.min(newY, maxY))}px`;
       noBtn.style.transform = "none";
     }
 
-    document.addEventListener("mousemove", (event) => {
-      const btnRect = noBtn.getBoundingClientRect();
-      const mouseX = event.clientX;
-      const mouseY = event.clientY;
-
-      const buffer = 90;
-      const isNear =
-        mouseX > btnRect.left - buffer &&
-        mouseX < btnRect.right + buffer &&
-        mouseY > btnRect.top - buffer &&
-        mouseY < btnRect.bottom + buffer;
-
-      if (isNear) {
-        moveAwayFromMouse(event);
+    document.addEventListener("mousemove", (e) => {
+      if (!initialized) {
+        placeNoButtonSafely();
+        initialized = true;
       }
+
+      const rect = noBtn.getBoundingClientRect();
+      const buffer = 120;
+
+      const near =
+        e.clientX > rect.left - buffer &&
+        e.clientX < rect.right + buffer &&
+        e.clientY > rect.top - buffer &&
+        e.clientY < rect.bottom + buffer;
+
+      if (near) {
+        moveNoButtonAway(e.clientX, e.clientY);
+      }
+    });
+
+    noBtn.addEventListener("mouseenter", () => {
+      placeNoButtonSafely();
+    });
+
+    noBtn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      placeNoButtonSafely();
     });
 
     noBtn.addEventListener("click", (e) => {
       e.preventDefault();
+      placeNoButtonSafely();
     });
 
     yesBtn.addEventListener("click", () => {
-      result.textContent = "고맙습니다. 평생 함께하는 것으로 계약이 체결되었습니다 ❤️";
+      alert("동의해주셔서 감사합니다 💙 평생 함께하는 것으로 계약이 체결되었습니다.");
+    });
+
+    window.addEventListener("load", () => {
+      placeNoButtonSafely();
+      initialized = true;
+    });
+
+    window.addEventListener("resize", () => {
+      placeNoButtonSafely();
     });
   </script>
 </body>
